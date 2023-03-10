@@ -1,0 +1,39 @@
+{
+	"name": "tsa-plugin-az",
+	"version": "0.0.0-managed-by-semantic-release",
+	"description": "A tsa-cli plugin to source data from Azure.",
+	"main": "dist/index.js",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"lint": "eslint ./src --ext .ts",
+		"build": "rimraf dist && yarn lint && tsc",
+		"prepare": "husky install"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/randymarsh77/tsa-plugin-az.git"
+	},
+	"author": "randymarsh77",
+	"license": "MIT",
+	"devDependencies": {
+		"@commitlint/cli": "^17.4.4",
+		"@simple-cli/base": "^1.1.1",
+		"@tsa-tools/cli": "^1.2.0",
+		"@types/node": "^18.15.0",
+		"@types/shelljs": "^0.8.11",
+		"commitlint-config-faithlife": "^1.0.0",
+		"eslint": "^8.35.0",
+		"eslint-config-faithlife": "^10.0.0-next.1",
+		"husky": "^8.0.3",
+		"prettier": "^2.8.4",
+		"rimraf": "^4.4.0",
+		"semantic-release": "^20.1.1",
+		"typescript": "^4.9.5"
+	},
+	"dependencies": {
+		"shelljs": "^0.8.5"
+	}
+}
