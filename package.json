@@ -24,6 +24,7 @@
 		"@tsa-tools/cli": "^1.2.0",
 		"@types/node": "^18.15.0",
 		"@types/shelljs": "^0.8.11",
+		"@types/timestring": "^6.0.2",
 		"commitlint-config-faithlife": "^1.0.0",
 		"eslint": "^8.35.0",
 		"eslint-config-faithlife": "^10.0.0-next.1",
@@ -34,6 +35,7 @@
 		"typescript": "^4.9.5"
 	},
 	"dependencies": {
-		"shelljs": "^0.8.5"
+		"shelljs": "^0.8.5",
+		"timestring": "^6.0.0"
 	}
 }

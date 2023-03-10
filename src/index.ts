@@ -1,3 +1,4 @@
+import timestring from 'timestring';
 import { IPluginWithOptions } from '@simple-cli/base';
 import { ILabeledTimeSeriesData, ITSAPluginArgs, TSAPluginResult } from '@tsa-tools/cli';
 import { exec } from 'shelljs';
@@ -51,6 +52,18 @@ const metricNames = {
 	cpu: 'Percentage CPU',
 	ram: 'Available Memory Bytes',
 };
+
+function getValidInterval(stepMS: number) {
+	const validIntervals = ['1m', '5m', '15m', '30m', '1h', '6h', '12h', '1d'].map((display) => ({
+		display,
+		ms: timestring(display, 'ms', {}),
+	}));
+	const closestMatch = validIntervals.reduce(
+		(best, v) => (Math.abs(v.ms - stepMS) < Math.abs(best.ms - stepMS) ? v : best),
+		validIntervals[0]
+	);
+	return closestMatch.display;
+}
 
 function execOrFail(command: string) {
 	const { code, stdout, stderr } = exec(command.trim(), { silent: true });
@@ -141,16 +154,16 @@ function logMetricTypeDescription(metric: MetricType) {
 const execute = async ({ start, end, step }: ITSAPluginArgs, options: IAZPluginOptions) => {
 	const startDate = new Date(start);
 	const endDate = new Date(end);
-	const intervalMinutes = Math.round(step / 60000);
+	const intervalValue = getValidInterval(step);
 	const startTime = `--start-time ${startDate.toISOString()}`;
 	const endTime = `--end-time ${endDate.toISOString()}`;
-	const interval = `--interval ${intervalMinutes}m`;
+	const interval = `--interval ${intervalValue}`;
 	const metricType = options.metric ?? MetricType.cpu;
 	const metrics = `--metric "${metricNames[metricType]}"`;
 	const timeSeriesFlags = `${metrics} ${startTime} ${endTime} ${interval}`;
 
 	console.log(
-		`Querying ${metricType} stats from ${startDate.toDateString()} @ ${startDate.toLocaleTimeString()} to ${endDate.toDateString()} @ ${endDate.toLocaleTimeString()} using an interval of ${intervalMinutes}m`
+		`Querying ${metricType} stats from ${startDate.toDateString()} @ ${startDate.toLocaleTimeString()} to ${endDate.toDateString()} @ ${endDate.toLocaleTimeString()} using an interval of ${intervalValue}`
 	);
 	logMetricTypeDescription(metricType);
 

@@ -797,6 +797,11 @@
     "@types/glob" "*"
     "@types/node" "*"
 
+"@types/timestring@^6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@types/timestring/-/timestring-6.0.2.tgz#326be2b66cd7f2a8e466c33aec3d14f6819da7ab"
+  integrity sha512-JPDV0pPv2UtUrYyWpn/iBA7aDp1vOPYZrUL/9R4Dxrp1XIUrFnqkhN2EroLU0DLsMyN3iWg1vI1pqBNZ+8zxIg==
+
 "@types/webidl-conversions@*":
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/@types/webidl-conversions/-/webidl-conversions-7.0.0.tgz#2b8e60e33906459219aa587e9d1a612ae994cfe7"
