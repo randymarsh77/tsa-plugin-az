@@ -64,8 +64,27 @@ function execOrFail(command: string) {
 	return stdout;
 }
 
+async function execOrFailAsync(command: string): Promise<string> {
+	return new Promise((resolve, reject) => {
+		exec(command.trim(), { silent: true }, (code, stdout, stderr) => {
+			if (code !== 0) {
+				console.error(`❌ Command failed: '${command}' ❌`);
+				console.log(stdout);
+				console.error(stderr);
+				process.exit(1);
+			}
+
+			resolve(stdout);
+		});
+	});
+}
+
 function az<T>(command: string) {
 	return JSON.parse(execOrFail(`az ${command}`)) as T;
+}
+
+async function azAsync<T>(command: string) {
+	return JSON.parse(await execOrFailAsync(`az ${command}`)) as T;
 }
 
 function getVMIds(options: IAZPluginOptions) {
@@ -82,9 +101,9 @@ function getVMIds(options: IAZPluginOptions) {
 		.map(({ id, name }) => ({ id, name }));
 }
 
-function getTimeSeries(id: string, options: string) {
+async function getTimeSeries(id: string, options: string) {
 	const resource = `--resource ${id}`;
-	const data = az<any>(`monitor metrics list ${resource} ${options}`);
+	const data = (await azAsync(`monitor metrics list ${resource} ${options}`)) as any;
 	const ts = data.value[0].timeseries[0].data;
 	return ts as IMetricDataPoint[];
 }
@@ -101,7 +120,7 @@ function transformValue(v: number, metric: MetricType) {
 function logMetricTypeDescription(metric: MetricType) {
 	switch (metric) {
 		case MetricType.cpu:
-			console.log('  CPU metrics are "Percent CPU used."');
+			console.log('  CPU metrics are "Percent CPU" used.');
 			console.log("  A high maximum means there isn't a lot of headroom during peak load.");
 			console.log(
 				'  A low mean means the vm might be over provisioned and is costing more money than it needs to be.'
@@ -137,19 +156,41 @@ const execute = async ({ start, end, step }: ITSAPluginArgs, options: IAZPluginO
 
 	try {
 		const vmIds = getVMIds(options);
-		process.stdout.write('Fetching data...');
-		const data = vmIds.reduce<ILabeledTimeSeriesData>((acc, vm, i) => {
+		const totalQueries = vmIds.length;
+		let completedQueries = 0;
+
+		const data: ILabeledTimeSeriesData = {};
+
+		const logProgress = () => {
 			process.stdout.clearLine(0);
 			process.stdout.cursorTo(0);
-			process.stdout.write(`Fetching data for ${vm.name} ${i} / ${vmIds.length}\r`);
-			const data = getTimeSeries(vm.id, timeSeriesFlags);
-			const label = vm.name;
-			const series = data
-				.filter((x) => x.average !== null)
-				.map((x) => [new Date(x.timeStamp), transformValue(x.average, metricType)]);
-			acc[label] = series as any;
-			return acc;
-		}, {});
+			process.stdout.write(
+				`Fetching data… (${completedQueries} / ${totalQueries} queries completed)`
+			);
+		};
+
+		logProgress();
+
+		const dataPromises = vmIds.map((vm) =>
+			(async () => {
+				const rawSeries = await getTimeSeries(vm.id, timeSeriesFlags);
+				const label = vm.name;
+				const series = rawSeries
+					.filter((x) => x.average !== null)
+					.map((x) => [new Date(x.timeStamp), transformValue(x.average, metricType)]);
+				data[label] = series as any;
+
+				completedQueries += 1;
+
+				logProgress();
+			})()
+		);
+
+		await Promise.all(dataPromises);
+
+		process.stdout.clearLine(0);
+		process.stdout.cursorTo(0);
+
 		return { data };
 	} catch (error) {
 		console.error(error);
