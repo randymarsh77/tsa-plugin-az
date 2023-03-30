@@ -117,7 +117,8 @@ function getVMIds(options: IAZPluginOptions) {
 async function getTimeSeries(id: string, options: string) {
 	const resource = `--resource ${id}`;
 	const data = (await azAsync(`monitor metrics list ${resource} ${options}`)) as any;
-	const ts = data.value[0].timeseries[0].data;
+	const { timeseries } = data.value[0] || {};
+	const ts = timeseries.length > 0 ? timeseries[0].data : null;
 	return ts as IMetricDataPoint[];
 }
 
@@ -187,11 +188,13 @@ const execute = async ({ start, end, step }: ITSAPluginArgs, options: IAZPluginO
 		const dataPromises = vmIds.map((vm) =>
 			(async () => {
 				const rawSeries = await getTimeSeries(vm.id, timeSeriesFlags);
-				const label = vm.name;
-				const series = rawSeries
-					.filter((x) => x.average !== null)
-					.map((x) => [new Date(x.timeStamp), transformValue(x.average, metricType)]);
-				data[label] = series as any;
+				if (rawSeries) {
+					const label = vm.name;
+					const series = rawSeries
+						.filter((x) => x.average !== null)
+						.map((x) => [new Date(x.timeStamp), transformValue(x.average, metricType)]);
+					data[label] = series as any;
+				}
 
 				completedQueries += 1;
 
