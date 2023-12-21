@@ -52,7 +52,9 @@ interface IAZResource {
 }
 
 interface IMetricDataPoint {
-	average: number;
+	average?: number;
+	maximum?: number;
+	minimum?: number;
 	timeStamp: string;
 }
 
@@ -164,6 +166,13 @@ function logMetricTypeDescription(metric: MetricType) {
 	}
 }
 
+function mapTimeSeriesDataPoint(point: IMetricDataPoint, metricType: MetricType) {
+	const value = point.average ?? point.minimum ?? point.maximum;
+	return value !== undefined && value !== null
+		? [new Date(point.timeStamp), transformValue(value, metricType)]
+		: null;
+}
+
 const execute = async ({ start, end, step }: ITSAPluginArgs, options: IAZPluginOptions) => {
 	const startDate = new Date(start);
 	const endDate = new Date(end);
@@ -203,8 +212,8 @@ const execute = async ({ start, end, step }: ITSAPluginArgs, options: IAZPluginO
 				if (rawSeries) {
 					const label = vm.name;
 					const series = rawSeries
-						.filter((x) => x.average !== null)
-						.map((x) => [new Date(x.timeStamp), transformValue(x.average, metricType)]);
+						.map((x) => mapTimeSeriesDataPoint(x, metricType))
+						.filter((x) => !!x);
 					data[label] = series as any;
 				}
 
