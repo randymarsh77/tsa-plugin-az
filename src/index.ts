@@ -6,6 +6,7 @@ import { exec } from 'shelljs';
 enum MetricType {
 	cpu = 'cpu',
 	ram = 'ram',
+	disk = 'disk',
 }
 
 const definitions = [
@@ -15,9 +16,14 @@ const definitions = [
 		description: 'Passed through to `az resource list`',
 	},
 	{
+		name: 'resource-type',
+		type: String,
+		description: 'Passed through to `az resource list`',
+	},
+	{
 		name: 'metric',
 		type: String,
-		description: 'One of [cpu|ram]',
+		description: 'One of [cpu|ram|disk]',
 	},
 	{
 		name: 'filter',
@@ -27,8 +33,10 @@ const definitions = [
 ];
 
 interface IAZOptions {
-	// eslint-disable-next-line @typescript-eslint/naming-convention
+	/* eslint-disable @typescript-eslint/naming-convention */
 	'resource-group': string;
+	'resource-type': string;
+	/* eslint-enable @typescript-eslint/naming-convention */
 }
 
 interface IAdditionalOptions {
@@ -51,6 +59,7 @@ interface IMetricDataPoint {
 const metricNames = {
 	cpu: 'Percentage CPU',
 	ram: 'Available Memory Bytes',
+	disk: 'storage_percent',
 };
 
 function getValidInterval(stepMS: number) {
@@ -102,7 +111,7 @@ async function azAsync<T>(command: string) {
 
 function getVMIds(options: IAZPluginOptions) {
 	const group = options['resource-group'] ? `--resource-group ${options['resource-group']}` : '';
-	const type = '--resource-type Microsoft.Compute/virtualMachines';
+	const type = `--resource-type ${options['resource-type'] ?? 'Microsoft.Compute/virtualMachines'}`;
 	return az<IAZResource[]>(`resource list ${type} ${group}`)
 		.filter((x) => {
 			if (!options.filter) {
@@ -146,6 +155,9 @@ function logMetricTypeDescription(metric: MetricType) {
 			console.log(
 				'  A high mean means the vm might be over provisioned and is costing more money than it needs to be.'
 			);
+			break;
+		case MetricType.disk:
+			console.log('  Disk metrics are "Percent Disk" used".');
 			break;
 		default:
 			break;

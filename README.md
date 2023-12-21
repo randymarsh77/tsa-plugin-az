@@ -26,8 +26,9 @@ $ tsa
 ### Plugin specific options
 | Flag   | Values |
 | ------ | ------ |
-| `--metric` | One of `cpu` or `ram` |
+| `--metric` | One of `cpu` or `ram` or `disk` |
 | `--resource-group` | forwards to `az` |
+| `--resource-type` | forwards to `az` |
 | `--filter` | regex filter on resource name |
 
 ### Standard `tsa` options
