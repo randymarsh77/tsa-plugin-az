@@ -6,6 +6,7 @@ import { exec } from 'shelljs';
 enum MetricType {
 	cpu = 'cpu',
 	ram = 'ram',
+	memory_percent = 'memory_percent',
 	disk = 'disk',
 }
 
@@ -23,7 +24,8 @@ const definitions = [
 	{
 		name: 'metric',
 		type: String,
-		description: 'One of [cpu|ram|disk]',
+		description:
+			'One of [cpu|ram|memory_percent|disk]. Certain values might only be valid for certain resource types.',
 	},
 	{
 		name: 'filter',
@@ -58,10 +60,18 @@ interface IMetricDataPoint {
 	timeStamp: string;
 }
 
-const metricNames = {
-	cpu: 'Percentage CPU',
-	ram: 'Available Memory Bytes',
-	disk: 'storage_percent',
+const metricNamesForResourceType: { [index: string]: { [index: string]: string } } = {
+	/* eslint-disable @typescript-eslint/naming-convention */
+	'Microsoft.Compute/virtualMachines': {
+		cpu: 'Percentage CPU',
+		ram: 'Available Memory Bytes',
+	},
+	'Microsoft.DBforMySQL/flexibleServers': {
+		cpu: 'cpu_percent',
+		memory_percent: 'memory_percent',
+		disk: 'storage_percent',
+	},
+	/* eslint-enable @typescript-eslint/naming-convention */
 };
 
 function getValidInterval(stepMS: number) {
@@ -173,6 +183,17 @@ function mapTimeSeriesDataPoint(point: IMetricDataPoint, metricType: MetricType)
 		: null;
 }
 
+function mapMetricName(options: IAZPluginOptions, metricType: MetricType) {
+	const type = options['resource-type'] ?? 'Microsoft.Compute/virtualMachines';
+	const map = metricNamesForResourceType[type] ?? {};
+	const metric = map[metricType];
+	if (!metric) {
+		console.error(`Metric '${metricType}' not supported for resource type '${type}'`);
+		process.exit(1);
+	}
+	return metric;
+}
+
 const execute = async ({ start, end, step }: ITSAPluginArgs, options: IAZPluginOptions) => {
 	const startDate = new Date(start);
 	const endDate = new Date(end);
@@ -181,7 +202,7 @@ const execute = async ({ start, end, step }: ITSAPluginArgs, options: IAZPluginO
 	const endTime = `--end-time ${endDate.toISOString()}`;
 	const interval = `--interval ${intervalValue}`;
 	const metricType = options.metric ?? MetricType.cpu;
-	const metrics = `--metric "${metricNames[metricType]}"`;
+	const metrics = `--metric "${mapMetricName(options, metricType)}"`;
 	const timeSeriesFlags = `${metrics} ${startTime} ${endTime} ${interval}`;
 
 	console.log(
